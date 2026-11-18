@@ -1,8 +1,5 @@
 # Thiết kế hệ thống DHR
 
-Tài liệu chốt kiến trúc, phân quyền (RBAC), interface smart contract và các luồng nghiệp vụ.
-A và B làm theo đúng interface này để code song song.
-
 ## 1. Sơ đồ kiến trúc tổng thể
 
 ```mermaid
