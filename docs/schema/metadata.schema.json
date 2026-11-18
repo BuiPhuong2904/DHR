@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dhr-metadata-v1",
+  "title": "DHR - Metadata nhân trắc học",
+  "description": "Metadata đi kèm một hồ sơ khám. Được mã hóa AES-256-GCM trước khi tải lên IPFS. KHÔNG chứa tên, địa chỉ, số điện thoại hay số giấy tờ.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "patientId", "recordType", "examDate", "anthropometrics"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Phiên bản schema",
+      "const": "1.0.0"
+    },
+    "patientId": {
+      "description": "Địa chỉ ví của bệnh nhân = mã định danh y tế duy nhất",
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "doctorId": {
+      "description": "Địa chỉ ví của bác sĩ khám",
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "facilityId": {
+      "description": "Địa chỉ ví của cơ sở y tế",
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "recordType": {
+      "description": "Loại hồ sơ",
+      "enum": ["GENERAL_CHECKUP", "XRAY", "ULTRASOUND", "LAB_TEST", "VACCINATION"]
+    },
+    "examDate": {
+      "description": "Ngày khám (YYYY-MM-DD)",
+      "type": "string",
+      "format": "date"
+    },
+    "sex": {
+      "description": "Giới tính sinh học",
+      "enum": ["MALE", "FEMALE", "OTHER", "UNDISCLOSED"]
+    },
+    "birthYear": {
+      "description": "Chỉ lưu năm sinh, không lưu ngày sinh đầy đủ, để giảm khả năng nhận diện",
+      "type": "integer",
+      "minimum": 1900,
+      "maximum": 2100
+    },
+    "anthropometrics": {
+      "description": "Chỉ số nhân trắc học và sinh hiệu",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heightCm", "weightKg"],
+      "properties": {
+        "heightCm": { "description": "Chiều cao (cm)", "type": "number", "minimum": 30, "maximum": 250 },
+        "weightKg": { "description": "Cân nặng (kg)", "type": "number", "minimum": 1, "maximum": 400 },
+        "bmi": { "description": "Chỉ số BMI", "type": "number", "minimum": 5, "maximum": 100 },
+        "waistCm": { "description": "Vòng eo (cm)", "type": "number", "minimum": 20, "maximum": 250 },
+        "bloodType": {
+          "description": "Nhóm máu",
+          "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        },
+        "bloodPressure": {
+          "description": "Huyết áp (mmHg)",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["systolic", "diastolic"],
+          "properties": {
+            "systolic": { "type": "integer", "minimum": 50, "maximum": 250 },
+            "diastolic": { "type": "integer", "minimum": 30, "maximum": 150 }
+          }
+        },
+        "heartRateBpm": { "description": "Nhịp tim (lần/phút)", "type": "integer", "minimum": 20, "maximum": 250 }
+      }
+    },
+    "attachments": {
+      "description": "Mã băm SHA-256 của các file đính kèm (ảnh, PDF) để đối chiếu toàn vẹn. CID nằm trên smart contract.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "sha256", "mimeType"],
+        "properties": {
+          "kind": { "enum": ["IMAGING", "SUMMARY_PDF"] },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "mimeType": { "enum": ["image/png", "image/jpeg", "application/pdf"] }
+        }
+      }
+    }
+  }
+}

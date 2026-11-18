@@ -1,0 +1,31 @@
+{
+    "schemaVersion": "1.0.0",
+    "patientId": "0x1E3d9eA7c2a1e9eA970e3a0691147Ec7990A5CE5",
+    "doctorId": "0xfF2DFd48C2506ed60A6317171425fec95a3D51e4",
+    "facilityId": "0xfe185C1FA620699Fe6eaAA001828cAfa37668498",
+    "recordType": "XRAY",
+    "examDate": "2026-11-18",
+    "sex": "MALE",
+    "birthYear": 2004,
+    "anthropometrics": {
+        "heightCm": 170,
+        "weightKg": 65,
+        "bmi": 22.5,
+        "waistCm": 78,
+        "bloodType": "O+",
+        "bloodPressure": { "systolic": 118, "diastolic": 76 },
+        "heartRateBpm": 72
+    },
+    "attachments": [
+        {
+        "kind": "IMAGING",
+        "sha256": "9f2c4e1b7a3d5f6e8c0b2a4d6f8e1c3b5a7d9f0e2c4b6a8d0f1e3c5b7a9d2f4e",
+        "mimeType": "image/png"
+        },
+        {
+        "kind": "SUMMARY_PDF",
+        "sha256": "1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e2b4d6f8a0c1e3b5d7f9a2c4e6b8d0f1a3c",
+        "mimeType": "application/pdf"
+        }
+    ]
+}
