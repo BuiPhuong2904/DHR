@@ -32,7 +32,13 @@ export default defineConfig({
       type: "http",
       chainType: "l1",
       url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [
+        configVariable("SEPOLIA_PRIVATE_KEY"),  // 0: Admin-BenhVien
+        configVariable("SEPOLIA_PK_DOCTOR1"),   // 1: BacSi-1
+        configVariable("SEPOLIA_PK_DOCTOR2"),   // 2: BacSi-2
+        configVariable("SEPOLIA_PK_PATIENT"),   // 3: BenhNhan
+        configVariable("SEPOLIA_PK_INSURER"),   // 4: BaoHiem
+      ],
     },
   },
   verify: {
