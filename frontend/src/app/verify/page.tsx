@@ -4,32 +4,46 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { INITIAL_SBTS, MOCK_WALLETS } from "@/mock/dhrData";
+import { useWallet } from "@/context/WalletContext";
+import { hasValidCertificate } from "@/lib/dhr";
+import { getProvider } from "@/lib/web3";
+import { CERT_LABELS } from "@/lib/directory";
 
 export default function VerifyPage() {
-  const [walletInput, setWalletInput] = useState(MOCK_WALLETS.patient);
+  const { signer } = useWallet();
+
+  const [walletInput, setWalletInput] = useState("0x1E3d9eA7c2a1e9eA970e3a0691147Ec7990A5CE5");
   const [certType, setCertType] = useState("HEALTH_CHECK_OK");
+  const [checking, setChecking] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<null | { valid: boolean; checkedWallet: string; checkedType: string }>(null);
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    const matched = INITIAL_SBTS.some(
-      (sbt) =>
-        sbt.patient.toLowerCase() === walletInput.trim().toLowerCase() &&
-        sbt.certType === certType &&
-        sbt.valid
-    );
-    setResult({
-      valid: matched,
-      checkedWallet: walletInput.trim(),
-      checkedType: certType,
-    });
+    if (!walletInput.trim()) return;
+
+    setErrorMsg(null);
+    setResult(null);
+    setChecking(true);
+    try {
+      const runner = signer ?? getProvider();
+      const valid = await hasValidCertificate(runner, walletInput.trim(), certType);
+      setResult({
+        valid,
+        checkedWallet: walletInput.trim(),
+        checkedType: certType,
+      });
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-xs text-center space-y-2">
-        <Badge variant="info">PUBLIC VERIFIER • SOULBOUND NFT</Badge>
+        <Badge variant="info">CỔNG KIỂM TRA CÔNG KHAI</Badge>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-950 pt-1">
           Cổng Xác thực Chứng nhận Y tế
         </h1>
@@ -39,6 +53,12 @@ export default function VerifyPage() {
       </div>
 
       <Card title="Tra cứu Chứng nhận Sức khỏe">
+        {errorMsg && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-400 text-red-900 font-semibold text-base">
+            ✕ {errorMsg}
+          </div>
+        )}
+
         <form onSubmit={handleVerify} className="space-y-5">
           <div>
             <label className="block font-bold text-stone-900 mb-1.5">
@@ -49,8 +69,8 @@ export default function VerifyPage() {
               required
               value={walletInput}
               onChange={(e) => setWalletInput(e.target.value)}
-              placeholder="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-              className="w-full px-4 py-3 rounded-xl border border-stone-300 font-mono text-base text-stone-950 focus:border-teal-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              placeholder="0x..."
+              className="w-full px-4 py-3 rounded-xl border border-stone-300 font-mono text-base text-stone-950 focus:border-teal-600 focus:outline-none"
             />
           </div>
 
@@ -63,14 +83,14 @@ export default function VerifyPage() {
               onChange={(e) => setCertType(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-stone-300 bg-white text-base font-semibold text-stone-950 focus:border-teal-600 focus:outline-none"
             >
-              <option value="HEALTH_CHECK_OK">Chứng nhận Đủ sức khỏe Lao động / Học tập</option>
-              <option value="VACCINATION_HEPB">Chứng nhận Tiêm chủng Viêm gan B</option>
-              <option value="TREATMENT_COMPLETED">Chứng nhận Hoàn thành Điều trị</option>
+              <option value="HEALTH_CHECK_OK">{CERT_LABELS.HEALTH_CHECK_OK}</option>
+              <option value="VACCINATION_HEPB">{CERT_LABELS.VACCINATION_HEPB}</option>
+              <option value="TREATMENT_COMPLETED">{CERT_LABELS.TREATMENT_COMPLETED}</option>
             </select>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" className="w-full">
-            Kiểm tra Chứng nhận
+          <Button type="submit" variant="primary" size="lg" disabled={checking} className="w-full">
+            {checking ? "Đang kiểm tra trên Sepolia..." : "Kiểm tra Chứng nhận"}
           </Button>
         </form>
 
@@ -91,7 +111,7 @@ export default function VerifyPage() {
             </div>
             <p className="text-base pt-1">
               Ví: <span className="font-mono font-semibold">{result.checkedWallet}</span> • Loại:{" "}
-              <strong>{result.checkedType}</strong>
+              <strong>{CERT_LABELS[result.checkedType] || result.checkedType}</strong>
             </p>
             <p className="text-sm opacity-80">
               (Bảo mật quyền riêng tư: Không hiển thị hồ sơ bệnh án hay chỉ số y khoa nhạy cảm)

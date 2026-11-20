@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@/context/WalletContext";
-import { MOCK_WALLETS } from "@/mock/dhrData";
+import { shortAddress } from "@/lib/directory";
 
 const NAV_ITEMS = [
   { href: "/", label: "Tổng quan" },
@@ -16,11 +16,17 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { address, connect, disconnect } = useWallet();
+  const { address, roles, connecting, error, connect, disconnect } = useWallet();
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const shortAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
+  const roleBadge = roles.isHospital
+    ? "Bệnh viện"
+    : roles.isDoctor
+    ? "Bác sĩ"
+    : roles.isVerifier
+    ? "Đơn vị xác thực"
+    : "Bệnh nhân";
 
   const handleCopy = () => {
     if (!address) return;
@@ -84,16 +90,9 @@ export function Navbar() {
 
           {address ? (
             <>
-              <select
-                aria-label="Chuyển đổi vai trò ví"
-                value={address}
-                onChange={(e) => connect(e.target.value)}
-                className="hidden lg:block bg-white border border-stone-300 hover:border-blue-400 text-stone-900 text-base font-semibold rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-teal-600 cursor-pointer transition-colors"
-              >
-                <option value={MOCK_WALLETS.patient}>Bệnh nhân</option>
-                <option value={MOCK_WALLETS.doctor1}>Bác sĩ</option>
-                <option value={MOCK_WALLETS.hospital}>Bệnh viện</option>
-              </select>
+              <span className="hidden lg:inline-flex items-center px-3.5 py-2 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 text-base font-bold whitespace-nowrap">
+                {roleBadge}
+              </span>
 
               <button
                 type="button"
@@ -102,7 +101,7 @@ export function Navbar() {
                 className="flex items-center gap-2 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 px-3 sm:px-3.5 py-2 rounded-xl font-mono text-base font-semibold whitespace-nowrap transition-colors cursor-pointer"
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{copied ? "Đã chép!" : shortAddr}</span>
+                <span>{copied ? "Đã chép!" : shortAddress(address)}</span>
               </button>
 
               <button
@@ -116,10 +115,11 @@ export function Navbar() {
           ) : (
             <button
               type="button"
-              onClick={() => connect()}
-              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-base whitespace-nowrap shadow-sm shadow-teal-600/20 transition-all cursor-pointer"
+              onClick={() => void connect()}
+              disabled={connecting}
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-semibold text-base whitespace-nowrap shadow-sm shadow-teal-600/20 transition-all cursor-pointer"
             >
-              Kết nối ví
+              {connecting ? "Đang kết nối..." : "Kết nối ví"}
             </button>
           )}
 
@@ -144,6 +144,13 @@ export function Navbar() {
         </div>
       </div>
 
+      {/* Thanh thông báo lỗi kết nối MetaMask */}
+      {error && (
+        <div className="bg-red-50 border-t border-red-300 px-4 py-2 text-center text-base font-semibold text-red-800">
+          {error}
+        </div>
+      )}
+
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-stone-200 px-4 pt-3 pb-5 space-y-4 shadow-lg">
@@ -157,7 +164,7 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
                     active
-                      ? "bg-blue-50 text-teal-700 border border-blue-200"
+                      ? "bg-teal-50 text-teal-700 border border-teal-200"
                       : "text-stone-800 hover:bg-stone-100"
                   }`}
                 >
@@ -168,32 +175,17 @@ export function Navbar() {
           </nav>
 
           {address && (
-            <div className="pt-3 border-t border-stone-200 space-y-3">
-              <label className="block text-base font-semibold text-stone-700">
-                Chuyển đổi vai trò ví demo:
-                <select
-                  value={address}
-                  onChange={(e) => {
-                    connect(e.target.value);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="mt-1.5 w-full bg-stone-50 border border-stone-300 text-stone-900 text-base font-semibold rounded-xl px-3.5 py-2.5"
-                >
-                  <option value={MOCK_WALLETS.patient}>Ví Bệnh nhân</option>
-                  <option value={MOCK_WALLETS.doctor1}>Ví Bác sĩ</option>
-                  <option value={MOCK_WALLETS.hospital}>Ví Bệnh viện</option>
-                </select>
-              </label>
-
+            <div className="pt-3 border-t border-stone-200 flex items-center justify-between gap-3">
+              <span className="font-bold text-teal-800">Vai trò: {roleBadge}</span>
               <button
                 type="button"
                 onClick={() => {
                   disconnect();
                   setMobileMenuOpen(false);
                 }}
-                className="w-full py-2.5 rounded-xl border border-red-300 bg-red-50 text-red-700 font-semibold text-base"
+                className="px-4 py-2 rounded-xl border border-red-300 bg-red-50 text-red-700 font-semibold text-base"
               >
-                Ngắt kết nối ví
+                Ngắt ví
               </button>
             </div>
           )}
