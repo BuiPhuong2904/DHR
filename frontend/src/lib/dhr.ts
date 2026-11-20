@@ -1,6 +1,6 @@
 "use client";
 
-import type { ContractRunner, JsonRpcSigner } from "ethers";
+import { id, type ContractRunner, type JsonRpcSigner } from "ethers";
 import {
   decryptData,
   encryptData,
@@ -288,7 +288,7 @@ export async function getActiveGrants(runner: ContractRunner, recordId: bigint) 
   return rows.filter((r) => r.expiresAt > now).map((r) => ({ ...r, expiresAt: new Date(r.expiresAt * 1000) }));
 }
 
-/** Nhật ký truy cập toàn bộ hồ sơ của bệnh nhân (đọc event RecordAccessed), mới nhất trước */
+/** Nhật ký truy cập toàn bộ hồ sơ của bệnh nhân, mới nhất trước */
 export async function getAccessLog(runner: ContractRunner, patient: string) {
   const { record } = getContracts(runner);
   const ids = new Set(([...(await record.getPatientRecords(patient))] as bigint[]).map(String));
@@ -380,4 +380,40 @@ export async function getCertificates(runner: ContractRunner, patient: string) {
     }
   }
   return certs;
+}
+
+/* ======================= Bệnh viện: quản lý bác sĩ & khẩn cấp ======================= */
+
+export async function grantDoctorRoleFlow(signer: JsonRpcSigner, doctor: string, onStatus?: OnStatus) {
+  return sendTx(getContracts(signer).record, "grantRole", [id("DOCTOR_ROLE"), doctor], onStatus);
+}
+
+export async function revokeDoctorRoleFlow(signer: JsonRpcSigner, doctor: string, onStatus?: OnStatus) {
+  return sendTx(getContracts(signer).record, "revokeRole", [id("DOCTOR_ROLE"), doctor], onStatus);
+}
+
+/** Các yêu cầu khẩn cấp còn hạn nhưng CHƯA được bệnh viện giao khóa – hiển thị ở trang /hospital */
+export async function getOpenEmergencies(runner: ContractRunner) {
+  const { record } = getContracts(runner);
+  const logs: AnyContract[] = await record.queryFilter(record.filters.EmergencyAccessed(), DEPLOY_BLOCK);
+  const now = Math.floor(Date.now() / 1000);
+  const open = [];
+  for (const l of logs.reverse()) {
+    const a = await record.getAccess(l.args.id, l.args.doctor);
+    if (a.emergency && Number(a.expiresAt) > now && (a.wrappedKey as string).length === 0) {
+      open.push({
+        recordId: l.args.id as bigint,
+        doctor: l.args.doctor as string,
+        reason: l.args.reason as string,
+        expiresAt: new Date(Number(a.expiresAt) * 1000),
+      });
+    }
+  }
+  return open;
+}
+
+/** Danh sách người giám hộ hiện tại của bệnh nhân */
+export async function getGuardiansOf(runner: ContractRunner, patient: string) {
+  const [guardians, threshold] = await getContracts(runner).record.getGuardians(patient);
+  return { guardians: [...guardians] as string[], threshold: Number(threshold) };
 }
