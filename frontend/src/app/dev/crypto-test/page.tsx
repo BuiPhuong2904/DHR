@@ -24,7 +24,7 @@ type EncryptedResult = {
 };
 
 const btn =
-  "rounded-lg border-2 border-slate-900 bg-slate-900 px-4 py-2 text-lg font-semibold text-white hover:bg-slate-700 disabled:opacity-40";
+  "rounded-lg border-2 border-stone-900 bg-stone-900 px-4 py-2 text-lg font-semibold text-white hover:bg-stone-700 disabled:opacity-40";
 
 export default function CryptoTestPage() {
   const [patientKeys, setPatientKeys] = useState<CryptoKeyPair | null>(null);
@@ -118,7 +118,7 @@ export default function CryptoTestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white p-8 text-slate-900">
+    <main className="min-h-screen bg-white p-8 text-stone-900">
       <h1 className="text-3xl font-bold">Thử nghiệm mã hóa bao thư (AES-256-GCM + RSA-OAEP)</h1>
       <p className="mt-2 text-lg">
         Trang kiểm thử của nhóm - mọi thao tác chạy trong trình duyệt, không gửi dữ liệu đi đâu.
@@ -152,7 +152,7 @@ export default function CryptoTestPage() {
           id="pw"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border-2 border-slate-900 px-3 py-2 text-lg"
+          className="rounded-lg border-2 border-stone-900 px-3 py-2 text-lg"
         />
         <button className={btn} disabled={!encrypted} onClick={run(backupAndRestore)}>
           5. Thử sao lưu / khôi phục khóa
@@ -168,7 +168,7 @@ export default function CryptoTestPage() {
         )}
       </div>
 
-      <pre className="mt-6 whitespace-pre-wrap rounded-lg border-2 border-slate-900 bg-slate-50 p-4 text-base leading-relaxed">
+      <pre className="mt-6 whitespace-pre-wrap rounded-lg border-2 border-stone-900 bg-stone-50 p-4 text-base leading-relaxed">
         {log.length ? log.join("\n") : "Nhật ký sẽ hiện ở đây..."}
       </pre>
       <button onClick={() => setLog([])} className="mt-3 text-lg underline">
