@@ -15,6 +15,11 @@ import { hasPublicKey, registerPublicKeyFlow } from "@/lib/dhr";
 import { EXPLORER_TX } from "@/lib/web3";
 
 export function KeyPanel() {
+  const { address } = useWallet();
+  return <KeyPanelInner key={address ?? "no-wallet"} />;
+}
+
+function KeyPanelInner() {
   const { address, signer } = useWallet();
   const { privateKey, setSessionKey, loadFromBackup, clear } = useKeys();
 
@@ -53,6 +58,14 @@ export function KeyPanel() {
   }, [signer, address]);
 
   const handleGenerate = async () => {
+    if (
+      registeredOnChain &&
+      !window.confirm(
+        "Ví này ĐÃ đăng ký khóa trên chuỗi. Nếu tạo khóa mới và đăng ký lại, các hồ sơ cũ sẽ KHÔNG giải mã được nữa.\n\nThông thường bạn chỉ cần NẠP KHÓA TỪ TỆP SAO LƯU (cột 3). Vẫn muốn tạo khóa mới?"
+      )
+    ) {
+      return;
+    }
     setErrorMsg(null);
     setMessage(null);
     setGenerating(true);

@@ -23,6 +23,21 @@ const DAY = 24 * 60 * 60;
 const toBytes32 = (hex: string) => `0x${hex}`;
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
+/* ======================= Đọc event theo từng đoạn block ======================= */
+
+const LOG_CHUNK = 9_000;
+
+async function queryLogs(contract: AnyContract, filter: AnyContract): Promise<AnyContract[]> {
+  const provider = contract.runner?.provider ?? contract.runner;
+  const latest: number = await provider.getBlockNumber();
+  const logs: AnyContract[] = [];
+  for (let from = DEPLOY_BLOCK; from <= latest; from += LOG_CHUNK) {
+    const to = Math.min(from + LOG_CHUNK - 1, latest);
+    logs.push(...(await contract.queryFilter(filter, from, to)));
+  }
+  return logs;
+}
+
 /* ======================= IPFS ======================= */
 
 async function uploadToIpfs(data: ArrayBuffer, name: string): Promise<string> {
@@ -288,11 +303,11 @@ export async function getActiveGrants(runner: ContractRunner, recordId: bigint) 
   return rows.filter((r) => r.expiresAt > now).map((r) => ({ ...r, expiresAt: new Date(r.expiresAt * 1000) }));
 }
 
-/** Nhật ký truy cập toàn bộ hồ sơ của bệnh nhân, mới nhất trước */
+/** Nhật ký truy cập toàn bộ hồ sơ của bệnh nhân (đọc event RecordAccessed), mới nhất trước */
 export async function getAccessLog(runner: ContractRunner, patient: string) {
   const { record } = getContracts(runner);
   const ids = new Set(([...(await record.getPatientRecords(patient))] as bigint[]).map(String));
-  const logs: AnyContract[] = await record.queryFilter(record.filters.RecordAccessed(), DEPLOY_BLOCK);
+  const logs: AnyContract[] = await queryLogs(record, record.filters.RecordAccessed());
   return logs
     .filter((l) => ids.has(String(l.args.id)))
     .map((l) => ({
@@ -308,7 +323,7 @@ export async function getAccessLog(runner: ContractRunner, patient: string) {
 /** Yêu cầu quyền đang chờ (bác sĩ đã yêu cầu nhưng chưa có quyền còn hạn) */
 export async function getPendingRequests(runner: ContractRunner, patient: string) {
   const { record } = getContracts(runner);
-  const logs: AnyContract[] = await record.queryFilter(record.filters.AccessRequested(null, null, patient), DEPLOY_BLOCK);
+  const logs: AnyContract[] = await queryLogs(record, record.filters.AccessRequested(null, null, patient));
   const seen = new Set<string>();
   const pending = [];
   for (const l of logs.reverse()) {
@@ -316,7 +331,7 @@ export async function getPendingRequests(runner: ContractRunner, patient: string
     if (seen.has(key)) continue;
     seen.add(key);
     const r = await record.getRecord(l.args.id);
-    if (!same(r.patient, patient)) continue; // hồ sơ đã chuyển chủ (sau khôi phục)
+    if (!same(r.patient, patient)) continue;
     if (!(await record.hasAccess(l.args.id, l.args.doctor))) {
       pending.push({ recordId: l.args.id as bigint, doctor: l.args.doctor as string, txHash: l.transactionHash as string });
     }
@@ -328,7 +343,7 @@ export async function getPendingRequests(runner: ContractRunner, patient: string
 export async function getEmergencyAlerts(runner: ContractRunner, patient: string) {
   const { record } = getContracts(runner);
   const ids = new Set(([...(await record.getPatientRecords(patient))] as bigint[]).map(String));
-  const logs: AnyContract[] = await record.queryFilter(record.filters.EmergencyAccessed(), DEPLOY_BLOCK);
+  const logs: AnyContract[] = await queryLogs(record, record.filters.EmergencyAccessed());
   return logs
     .filter((l) => ids.has(String(l.args.id)))
     .map((l) => ({
@@ -364,11 +379,11 @@ export async function hasValidCertificate(runner: ContractRunner, patient: strin
 /** Danh sách chứng nhận còn sở hữu của bệnh nhân */
 export async function getCertificates(runner: ContractRunner, patient: string) {
   const { sbt } = getContracts(runner);
-  const logs: AnyContract[] = await sbt.queryFilter(sbt.filters.CertificateIssued(null, patient), DEPLOY_BLOCK);
+  const logs: AnyContract[] = await queryLogs(sbt, sbt.filters.CertificateIssued(null, patient));
   const certs = [];
   for (const l of logs) {
     try {
-      const c = await sbt.getCertificate(l.args.tokenId);
+      const c = await sbt.getCertificate(l.args.tokenId); // token đã bị thu hồi sẽ báo lỗi
       certs.push({
         tokenId: l.args.tokenId as bigint,
         certType: c.certType as string,
@@ -395,7 +410,7 @@ export async function revokeDoctorRoleFlow(signer: JsonRpcSigner, doctor: string
 /** Các yêu cầu khẩn cấp còn hạn nhưng CHƯA được bệnh viện giao khóa – hiển thị ở trang /hospital */
 export async function getOpenEmergencies(runner: ContractRunner) {
   const { record } = getContracts(runner);
-  const logs: AnyContract[] = await record.queryFilter(record.filters.EmergencyAccessed(), DEPLOY_BLOCK);
+  const logs: AnyContract[] = await queryLogs(record, record.filters.EmergencyAccessed());
   const now = Math.floor(Date.now() / 1000);
   const open = [];
   for (const l of logs.reverse()) {

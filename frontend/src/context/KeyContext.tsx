@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useState } from "react";
+import { useWallet } from "@/context/WalletContext";
 import { restorePrivateKey, type KeyBackup } from "@/lib/crypto";
 
 interface KeyContextType {
@@ -18,9 +19,15 @@ const KeyContext = createContext<KeyContextType>({
 });
 
 export function KeyProvider({ children }: { children: React.ReactNode }) {
-  const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
+  const { address } = useWallet();
+  const [session, setSession] = useState<{ key: CryptoKey; owner: string } | null>(null);
+  const privateKey = session && address && session.owner === address.toLowerCase() ? session.key : null;
+  const setPrivateKey = useCallback(
+    (key: CryptoKey | null) => setSession(key && address ? { key, owner: address.toLowerCase() } : null),
+    [address],
+  );
 
-  const setSessionKey = useCallback((key: CryptoKey) => setPrivateKey(key), []);
+  const setSessionKey = useCallback((key: CryptoKey) => setPrivateKey(key), [setPrivateKey]);
 
   const loadFromBackup = useCallback(async (file: File, password: string) => {
     let backup: KeyBackup;
@@ -34,9 +41,9 @@ export function KeyProvider({ children }: { children: React.ReactNode }) {
     } catch {
       throw new Error("Sai mật khẩu hoặc file sao lưu bị hỏng.");
     }
-  }, []);
+  }, [setPrivateKey]);
 
-  const clear = useCallback(() => setPrivateKey(null), []);
+  const clear = useCallback(() => setSession(null), []);
 
   return (
     <KeyContext.Provider value={{ privateKey, setSessionKey, loadFromBackup, clear }}>{children}</KeyContext.Provider>
